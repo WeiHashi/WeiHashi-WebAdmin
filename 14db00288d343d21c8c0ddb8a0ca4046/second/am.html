@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="../../css/layui.css">
+</head>
+
+<body>
+    <div class="layui-container">
+        <div class="layui-row layui-col-space10">
+            <div class="layui-col-md4">
+                <table id="ins" lay-filter="ins" lay-data="{id: 'ins'}"></table>
+                <script type="text/html" id="inOperation">
+                    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="cm">班级账号管理</a>
+                </script>
+            </div>
+            <div class="layui-col-md4">
+                <table id="cs" lay-filter="cs" lay-data="{id: 'cs'}"></table>
+                <script type="text/html" id="cOperation">
+                    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="delete">删除</a>
+                </script>
+            </div>
+            <div class="layui-col-md4">
+                <form class="layui-form" id="qform" style="margin-top: 20px;">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">名称</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="name" required lay-verify="required" placeholder="请输入标题"
+                                autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">单选框</label>
+                        <div class="layui-input-block">
+                            <input type="radio" name="atype" lay-filter="atype" value="班级账号" title="班级账号" checked>
+                            <input type="radio" name="atype" lay-filter="atype" value="学院账号" title="学院账号">
+                        </div>
+                    </div>
+                    <div class="layui-form-item" id="toIns">
+                        <label class="layui-form-label">归属学院</label>
+                        <div class="layui-input-block">
+                            <select id="inSelect" name="to_ins">
+                                <option value=""></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <div class="layui-input-block">
+                            <button class="layui-btn" lay-submit lay-filter="getNum">生成账号</button>
+                            <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    </div>
+    <script src="../../layui.js"></script>
+    <script>
+        layui.use(['element', 'table', 'form', 'layer'], function () {
+            var element = layui.element
+            var table = layui.table
+            var form = layui.form
+            var $ = layui.jquery
+            var layer = layui.layer
+            let deviceId = window.localStorage.getItem("Device-ID")
+            if (deviceId != null) {
+                $.ajaxSetup({
+                    headers: {
+                        "Device-ID": deviceId
+                    }
+                })
+            }
+            $.ajax({
+                type: 'GET',
+                url: 'https://devmeteor.cn:8080/suGetInstituteList',
+                dataType: 'json',
+                success: function (e) {
+                    if (e.code == 20001) {
+                        if (e.data != null) {
+                            window.localStorage.setItem('Device-ID', e.data)
+                        }
+                        window.location.href = '../../refuse.html';
+                    }
+                    if (e.code == 10004) {
+                        var data = e.data
+                        for (i in data) {
+                            var op = "<option value=\"" + data[i].institute_id + "\">" + data[i].name + "</option>"
+                            $('#inSelect').append(op)
+                        }
+                        form.render('select')
+                        table.render({
+                            elem: '#ins',
+                            data: data,
+                            height: 'full-50',
+                            page: true,
+                            toolbar: true,
+                            defaultToolbar: ['print', 'exports'],
+                            cols: [[
+                                { field: 'institute_id', hide: true },
+                                { field: 'name', title: '学院' },
+                                { field: 'username', title: '用户名' },
+                                { field: 'password', title: '密码', edit: true },
+                                { toolbar: '#inOperation', title: '操作', width: 120 }
+                            ]]
+                        })
+                    }
+                }
+            })
+            table.render({
+                elem: '#cs',
+                data: [],
+                height: 'full-50',
+                page: true,
+                toolbar: true,
+                defaultToolbar: ['print', 'exports'],
+                cols: [[
+                    { field: 'class_id', hide: true },
+                    { field: 'name', title: '班级' },
+                    { field: 'institute_id', hide: true },
+                    { field: 'username', title: '用户名' },
+                    { field: 'password', title: '密码', edit: true },
+                    { toolbar: '#cOperation', title: '操作', width: 70 }
+                ]]
+            })
+            table.on('tool(ins)', function (e) {
+                var data = e.data
+                if (e.event == 'cm') {
+                    table.reload('cs', {
+                        url: 'https://devmeteor.cn:8080/suGetClassListOfInstitute?institute_id=' + data.institute_id, title: data.name, parseData: function (res) {
+                            if (res.code == 10004)
+                                return { code: 0, count: res.data.total, data: res.data.list }
+                            else
+                                return { code: 500 }
+                        }
+                    })
+                }
+            })
+            table.on('edit(ins)', function (obj) {
+                var value = obj.value
+                    , data = obj.data
+                    , field = obj.field
+                $.ajax({
+                    type: 'PUT',
+                    url: 'https://devmeteor.cn:8080/suUpdateInstitute?institute_id=' + data.institute_id + '&field=' + field + '&value=' + value,
+                    success: function () {
+                        layer.msg('修改成功')
+                    },
+                    error: function () {
+                        layer.msg('修改失败')
+                    }
+                })
+            })
+            table.on('edit(cs)', function (obj) {
+                var value = obj.value
+                    , data = obj.data
+                    , field = obj.field
+                $.ajax({
+                    type: 'PUT',
+                    url: 'https://devmeteor.cn:8080/suUpdateClass?class_id=' + data.class_id + '&field=' + field + '&value=' + value,
+                    success: function () {
+                        layer.msg('修改成功')
+                    },
+                    error: function () {
+                        layer.msg('修改失败')
+                    }
+                })
+            })
+            form.on('radio(atype)', function (data) {
+                if (data.elem.value == '班级账号')
+                    $('#toIns')[0].style.display = ''
+                else if (data.elem.value == '学院账号')
+                    $('#toIns')[0].style.display = 'none'
+            });
+            form.on('submit(getNum)', function (data) {
+                var type = 0
+                var to_ins = ''
+                if (data.field.atype == '班级账号') {
+                    if (data.field.to_ins == '') {
+                        layer.msg('请选择归属学院')
+                        return false
+                    }
+                    type = 1
+                    to_ins = data.field.to_ins
+                }
+                $.ajax({
+                    type: 'POST',
+                    url: 'https://devmeteor.cn:8080/suAddAdmin',
+                    data: {
+                        name: data.field.name,
+                        type: type,
+                        to_ins: to_ins
+                    },
+                    success: function (e) {
+                        if (e.code == 10001) {
+                            layer.open({
+                                title: "添加成功",
+                                content: "id：" + e.data.id + "<br>用户名：" + e.data.username + "<br>密码：" + e.data.password
+                            })
+                        } else {
+                            layer.msg('添加失败，请重试')
+                        }
+                    },
+                    error: function () {
+                        layer.msg('添加失败，请重试')
+                    },
+                    dataType: 'json'
+                })
+                return false
+            })
+            table.on('tool(cs)', function (e) {
+                var institute_id = e.data.institute_id
+                if (e.event == 'delete') {
+                    layer.confirm('删除账号将同时删除所有与之相关的数据，例如：通知、问卷等，确认删除？', function (index) {
+                        $.ajax({
+                            type: 'DELETE',
+                            url: 'https://devmeteor.cn:8080/suDeleteAdmin/' + e.data.class_id,
+                            success: function (e) {
+                                layer.msg('已删除')
+                                layer.close(index)
+                                table.reload('cs', {
+                                    url: 'https://devmeteor.cn:8080/suGetClassListOfInstitute?institute_id=' + institute_id, parseData: function (res) {
+                                        if (res.code == 10004)
+                                            return { code: 0, data: res.data }
+                                        else
+                                            return { code: 500 }
+                                    }
+                                })
+                            },
+                            error(e) {
+                                layer.msg('删除失败，请重试')
+                            }
+                        })
+                    })
+                }
+            })
+        })
+    </script>
+</body>
+
+</html>

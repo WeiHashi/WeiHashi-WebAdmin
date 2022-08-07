@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="../../css/layui.css">
+</head>
+
+<body>
+    <div class="layui-container">
+        <div class="layui-row layui-col-space10">
+            <div class="layui-col-md6 layui-col-xs12">
+                <table id="qns" lay-filter="qns" lay-data="{id: 'qns'}"></table>
+                <script type="text/html" id="setTop">
+                    <input type="checkbox" name="top" value="{{d.top_level!=0}}" lay-skin="switch" lay-text="是|否"
+                        lay-filter="top" {{ d.top_level!=0 ? 'checked' : '' }}>
+                </script>
+                <script type="text/html" id="qnsOperation">
+                    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="detail">详情</a>
+                    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="delete">删除</a>
+                </script>
+            </div>
+            <div class="layui-col-md6 layui-col-xs12">
+                <table id="qs" lay-filter="qs" lay-data="{id: 'qs'}"></table>
+                <script type="text/html" id="qsOperation">
+                    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="detail">详情</a>
+                    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="delete">删除</a>
+                </script>
+            </div>
+        </div>
+    </div>
+    <script src="../../layui.js"></script>
+    <script>
+        var qdata = [{ "obj_id": "xxxxx", "title": "qs", "des": "qs", "questions": [{ "id": 1, "question": "q1", "type": 0, "des": "q1" }, { "id": 2, "question": "q2", "type": 1, "des": ["a", "b", "c"] }, { "id": 3, "question": "q3", "type": 0, "des": "q3" }], "timestamp": "2019-11-30 16:58:59" }]
+        var qsdata = {}
+        layui.use(['element', 'table','form'], function () {
+            var element = layui.element
+            var table = layui.table
+            var form=layui.form
+            var $ = layui.jquery
+            let deviceId = window.localStorage.getItem("Device-ID")
+            if (deviceId != null) {
+                $.ajaxSetup({
+                    headers: {
+                        "Device-ID": deviceId
+                    }
+                })
+            }
+            table.render({
+                elem: '#qns',
+                title: '问题概要',
+                toolbar: true,
+                defaultToolbar: ['print', 'exports'],
+                height: 'full',
+                initSort: { field: 'timestamp', type: 'desc' },
+                url: 'https://devmeteor.cn:8080/suGetQuestionnaireList',
+                data: qdata,
+                cols: [[
+                    { field: 'obj_id', title: 'obj_id', hide: true },
+                    { field: 'title', title: '标题', edit: 'text' },
+                    { field: 'des', title: '描述', edit: 'text' },
+                    { field: 'sender', title: '发送者', width: 80 },
+                    {
+                        field: 'receiver', title: '接收对象', width: 90, templet: function (d) {
+                            var receiver = JSON.parse(d.receiver)
+                            var receiverText = ""
+                            if (receiver.institute.length != 0)
+                                receiverText += "学院：" + receiver.institute + "<br>"
+                            if (receiver.classes.length != 0)
+                                receiverText += "班级：" + receiver.classes + "<br>"
+                            if (receiver.students.length != 0)
+                                receiverText += "学号：" + receiver.students + "<br>"
+                            switch (d.type) {
+                                case 0: return receiverText
+                                case 1: return '全员'
+                            }
+                        }
+                    },
+                    {
+                        field: 'type', title: '问卷类型', width: 90, templet: function (d) {
+                            switch (d.type) {
+                                case 0: return '定向'
+                                case 1: return '全员'
+                            }
+                        }
+                    },
+                    {
+                        field: 'timestamp', title: '发送时间', width: 150, sort: true, templet: function (d) {
+                            var date = new Date(d.timestamp)
+                            var year = date.getFullYear()
+                            var month = date.getMonth() + 1
+                            var day = date.getDate()
+                            var h = date.getHours()
+                            var m = date.getMinutes()
+                            return year + "年" + month + "月" + day + "日 " + (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m)
+                        }
+                    },
+                    { field: 'top_level', title: '是否置顶', templet: '#setTop', width: 120, unresize: true },
+                    { toolbar: '#qnsOperation', title: '操作', width: 120 }
+                ]],
+                parseData: function (res) {
+                    if (res.code == 20001) {
+                        if (res.data != null) {
+                            window.localStorage.setItem('Device-ID', res.data)
+                        }
+                        window.location.href = '../../refuse.html';
+                    }
+                    if (res.code == 10004)
+                        return { code: 0, count: res.data.total, data: res.data.list }
+                    return { code: 500 }
+                }
+            })
+            table.render({
+                elem: '#qs',
+                title: '暂无数据',
+                data: [],
+                toolbar: true,
+                page:true,
+                initSort: { field: 'id', type: 'asc' },
+                defaultToolbar: ['print', 'exports'],
+                height: 'full',
+                cols: [[
+                    { field: 'id', title: '序号', width: 80, sort: true },
+                    { field: 'question', title: '题目' },
+                    {
+                        field: 'type', title: '问题类型', width: 90, templet: function (d) {
+                            switch (d.type) {
+                                case 0: return '填空'
+                                case 1: return '单选'
+                                case 2: return '多选'
+                            }
+                        }
+                    },
+                    { field: 'des', title: '问题描述/选项' }
+                ]]
+            })
+
+            table.on('tool(qns)', function (e) {
+                var data = e.data
+                if (e.event == 'detail') {
+                    qsdata = data
+                    table.reload('qs', { data: JSON.parse(data.questions), title: data.title })
+                } else if (e.event == 'delete') {
+                    layer.confirm('删除问卷将会同时删除所有用户提交的该问卷的答案，请确保在删除前对重要的问卷答案进行备份，确认删除？', function (index) {
+                        $.ajax({
+                            type: 'DELETE',
+                            url: 'https://devmeteor.cn:8080/adminDeleteQuestionnaire/' + data.obj_id,
+                            success: function (e) {
+                                layer.msg('已删除')
+                                layer.close(index)
+                                qsdata = {}
+                                table.reload('qs', { data: [] })
+                                table.reload('qns', { url: 'https://devmeteor.cn:8080/suGetQuestionnaireList' })
+                            },
+                            error(e) {
+                                layer.msg('删除失败，请重试')
+                            }
+                        })
+                    })
+                }
+            })
+            table.on('tool(qs)', function (e) {
+                var data = e.data
+                if (e.event == 'detail') {
+                    var type = ''
+                    switch (data.type) {
+                        case 0:
+                            type = '填空'
+                            break
+                        case 1:
+                            type = '单选'
+                            break
+                        case 2:
+                            type= '多选'
+                            break
+                    }
+                    layer.open({
+                        title: "详情",
+                        content: "序号：" + data.id + "<br>问题：" + data.question + "<br>问题类型：" + type + "<br>问题描述/选项：" + data.des
+                    })
+                } else if (e.event == 'delete') {
+                    if (qsdata.questions.length <= 1) {
+                        layer.msg('问卷中至少要有1个问题')
+                        return
+                    }
+                    qsdata.questions.splice(data.id - 1, 1)
+                    for (i = 0; i < qsdata.questions.length; i++)
+                        qsdata.questions[i].id = i + 1
+                    table.reload('qs', { data: qsdata.questions })
+                }
+            })
+            table.on('edit(qns)', function (obj) {
+                var value = obj.value
+                    , data = obj.data
+                    , field = obj.field
+                $.ajax({
+                    type: 'PUT',
+                    url: 'https://devmeteor.cn:8080/suUpdateQuestionnaire?obj_id=' + data.obj_id + '&field=' + field + '&value=' + value,
+                    success: function () {
+                        layer.msg('修改成功')
+                    },
+                    error: function () {
+                        layer.msg('修改失败')
+                    }
+                })
+            })
+            form.on('switch(top)', function (obj) {
+                var isTop = obj.elem.checked
+                var objId = obj.othis[0].parentNode.parentNode.parentNode.firstChild.firstChild.innerText
+                $.ajax({
+                    type: 'PUT',
+                    url: 'https://devmeteor.cn:8080/suSetQuestionnaireTop?obj_id=' + objId + '&top=' + isTop,
+                    success: function () {
+                        layer.msg('置顶成功')
+                    },
+                    error: function () {
+                        layer.msg('置顶失败')
+                    }
+                })
+            })
+        })
+    </script>
+</body>
+
+</html>

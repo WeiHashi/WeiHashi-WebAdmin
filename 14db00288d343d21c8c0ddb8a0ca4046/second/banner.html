@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="../../css/layui.css">
+</head>
+
+<body>
+    <div class="layui-container">
+        <button class="layui-btn" id="add">上传</button>
+        <table id="banner" lay-filter="banner" lay-data="{id: 'banner'}"></table>
+    </div>
+    <script type="text/html" id="enabled">
+        <input type="checkbox" name="enabled" value="{{d.enabled}}" obj="{{d.obj_id}}" lay-skin="switch" lay-text="是|否"
+            lay-filter="enabled" {{ d.enabled ? 'checked' : '' }}>
+    </script>
+    <script type="text/html" id="operation">
+        <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="preview">预览</a>
+        <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="delete">删除</a>
+    </script>
+    <script src="../../layui.js"></script>
+    <script>
+        layui.use(['element', 'table', 'upload', 'form'], function () {
+            var element = layui.element
+            var table = layui.table
+            var upload = layui.upload
+            var form = layui.form
+            var $ = layui.jquery
+            let deviceId = window.localStorage.getItem("Device-ID")
+            if (deviceId != null) {
+                $.ajaxSetup({
+                    headers: {
+                        "Device-ID": deviceId
+                    }
+                })
+            }
+            upload.render({
+                elem: '#add',
+                url: 'https://devmeteor.cn:8080/suUploadBanner',
+                done: function (e) {
+                    if (e.code != 200) {
+                        layer.msg('上传失败')
+                        return
+                    }
+                    layer.msg('上传成功')
+                    table.reload('banner', { url: 'https://devmeteor.cn:8080/suGetBannerList' })
+                },
+                error: function (e) {
+                    layer.msg("上传失败")
+                    console.log(e)
+                }
+            })
+            table.render({
+                elem: '#banner',
+                title: '轮播管理',
+                height: 'full-80',
+                toolbar: true,
+                page: true,
+                url: 'https://devmeteor.cn:8080/suGetBannerList',
+                cols: [[
+                    { field: 'url', title: '链接',width:500 },
+                    {
+                        field: 'content_id', title: '链接id', edit: true
+                    },
+                    { field: 'prior', edit: true, title: '优先级' },
+                    { field: 'enabled', title: '启用', templet: '#enabled' },
+                    { toolbar: '#operation', title: '操作', width: 120 }
+                ]],
+                parseData: function (res) {
+                    if (res.code == 20001) {
+                        if (res.data != null) {
+                            window.localStorage.setItem('Device-ID', res.data)
+                        }
+                        window.location.href = '../../refuse.html';
+                    }
+                    if (res.code == 10004)
+                        return { code: 0, count: res.data.total, data: res.data.list }
+                    else
+                        return { code: 500, msg: "获取异常" }
+                }
+            })
+            table.on('edit(banner)', function (obj) {
+                var value = obj.value
+                    , data = obj.data
+                    , field = obj.field
+                $.ajax({
+                    url: 'https://devmeteor.cn:8080/suUpdateBanner?id=' + data.obj_id + "&field=" + field + "&value=" + value,
+                    method: 'PUT',
+                    success: function (e) {
+                        layer.msg("修改成功")
+                    },
+                    error: function (e) {
+                        layer.msg("修改失败")
+                    }
+                })
+            })
+            form.on('switch(enabled)', function (obj) {
+                var id = $(this).attr('obj')
+                var value = obj.elem.checked
+                $.ajax({
+                    url: 'https://devmeteor.cn:8080/suEnableBanner?id=' + id + "&enabled=" + value,
+                    method: 'PUT',
+                    success: function (e) {
+                        layer.msg("设置成功")
+                    },
+                    error: function (e) {
+                        layer.msg("设置失败")
+                    }
+                })
+            })
+            table.on('tool(banner)', function (e) {
+                if(e.event=='delete'){
+                    var arr = e.data.url.split('/')
+                    layer.confirm('确认删除？', function () {
+                        $.ajax({
+                            url: 'https://devmeteor.cn:8080/suDeleteBanner/' + e.data.obj_id + '?name=' + arr[arr.length - 1],
+                            method: 'DELETE',
+                            success: function () {
+                                layer.msg('已删除')
+                                table.reload('banner', { url: 'https://devmeteor.cn:8080/suGetBannerList' })
+                            },
+                            error: function () {
+                                layer.msg('删除失败')
+                            }
+                        })
+                    })
+                }else{
+                    layer.open({
+                        type: 1,
+                        area: ['420px', '300px'], //宽高
+                        content: '<div style="display:flex;width:420px;height:240px;justify-content:center;align-items:center"><img src="'+e.data.url+'" style="max-width:420px;max-height:240px"></div>'
+                    });
+                }
+            })
+        })
+    </script>
+</body>
+
+</html>

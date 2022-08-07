@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="../../css/layui.css">
+    <style>
+        .layui-form {
+            margin-top: 20px;
+        }
+
+        #qform {
+            margin-top: 40px;
+        }
+
+        .qodel {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-container">
+        <div class="layui-row layui-col-space20" style="margin-top:10px">
+            <div class="layui-col-md8 layui-col-xs12">
+                <table id="qs" lay-filter="qs" lay-data="{id: 'qs'}"></table>
+                <script type="text/html" id="operation">
+                    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="detail">详情</a>
+                    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="delete">删除</a>
+                </script>
+            </div>
+            <div class="layui-col-md4 layui-col-xs12">
+                <form class="layui-form">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">标题</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="title" required lay-verify="required" placeholder="请输入标题"
+                                autocomplete="off" class="layui-input" id="qtitle">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">问题类型</label>
+                        <div class="layui-input-block">
+                            <input id="qodefault" type="radio" lay-filter="qtype" name="qtype" value="填空" title="填空"
+                                checked>
+                            <input type="radio" lay-filter="qtype" name="qtype" value="单选" title="单选">
+                        </div>
+                    </div>
+                    <div class="layui-form-item layui-form-text" id="qdes">
+                        <label class="layui-form-label">描述</label>
+                        <div class="layui-input-block">
+                            <textarea name="content" placeholder="请输入描述内容" class="layui-textarea"></textarea>
+                        </div>
+                    </div>
+                    <div id="qo"></div>
+                    <div class="layui-form-item">
+                        <div class="layui-input-block">
+                            <input class="layui-btn layui-btn-primary layui-btn-sm" type="button" id="addqo"
+                                value="添加选项" style="display: none;">
+                            <button class="layui-btn  layui-btn-sm" lay-submit lay-filter="addq">添加问题</button>
+                            <button type="reset" class="layui-btn layui-btn-primary  layui-btn-sm"
+                                id="resetq">重置</button>
+                        </div>
+                    </div>
+                </form>
+                <form class="layui-form" id="qform">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">标题</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="title" required lay-verify="required" placeholder="请输入标题"
+                                autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item layui-form-text">
+                        <label class="layui-form-label">描述</label>
+                        <div class="layui-input-block">
+                            <textarea name="content" required lay-verify="required" placeholder="请输入描述内容"
+                                class="layui-textarea"></textarea>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <div class="layui-input-block">
+                            <input type="checkbox" name="top" title="置顶">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <div class="layui-input-block">
+                            <button class="layui-btn" lay-submit lay-filter="sendqn">立即发布</button>
+                            <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="../../layui.js"></script>
+    <script>
+        var ques = []
+        layui.use(['element', 'form', 'table', 'layer'], function () {
+            var $ = layui.jquery
+            var element = layui.element
+            var form = layui.form
+            var table = layui.table
+            let deviceId = window.localStorage.getItem("Device-ID")
+            if (deviceId != null) {
+                $.ajaxSetup({
+                    headers: {
+                        "Device-ID": deviceId
+                    }
+                })
+            }
+            var layer = layui.layer
+            table.render({
+                elem: '#qs'
+                , title: '题目'
+                , toolbar: true
+                , data: ques
+                , cols: [[
+                    { field: 'id', title: '序号', width: 80, sort: true }
+                    , { field: 'question', title: '问题', width: 160 }
+                    , {
+                        field: 'type', title: '问题类型', width: 120, templet: function (d) {
+                            switch (d.type) {
+                                case 0: return '填空'
+                                case 1: return '单选'
+                            }
+                        }
+                    }
+                    , { field: 'des', title: '问题描述/选项', width: 240 }
+                    , { toolbar: '#operation', title: '操作', width: 120 }
+                ]]
+            });
+
+            table.on('tool(qs)', function (e) {
+                var data = e.data
+                if (e.event == 'detail') {
+                    layer.open({
+                        title: "详情",
+                        content: "序号：" + data.id + "<br>问题：" + data.question + "<br>问题类型：" + data.type + "<br>问题描述/选项：" + data.des
+                    })
+                } else if (e.event == 'delete') {
+                    ques.splice(data.id - 1, 1)
+                    for (i = 0; i < ques.length; i++)
+                        ques[i].id = i + 1
+                    table.reload('qs', { data: ques })
+                }
+            })
+
+            $('#resetq').click(function () {
+                $('#qdes')[0].style.display = ''
+                $('#addqo')[0].style.display = 'none'
+                $('#qo')[0].style.display = 'none'
+            })
+
+            form.on('radio(qtype)', function (data) {
+                $('#qdes')[0].style.display = 'none'
+                $('#addqo')[0].style.display = 'none'
+                $('#qo')[0].style.display = 'none'
+                if (data.elem.value == '填空')
+                    $('#qdes')[0].style.display = ''
+                else if (data.elem.value == '单选') {
+                    $('#qo')[0].style.display = ''
+                    $('#addqo')[0].style.display = ''
+                    $('#addqo').click(function () {
+                        var qonum = $('#qo').children().length
+                        if (qonum < 10) {
+                            var oName = String.fromCharCode(qonum + 65)
+                            var newOp = "<div class=\"layui-form-item\"><label class=\"layui-form-label\">" + oName + "</label><div class=\"layui-input-inline\"><input type=\"text\" name=\"title\" placeholder=\"请输入选项\"autocomplete=\"off\" class=\"layui-input\"></div><div class=\"layui-form-mid layui-word-aux\"><a style=\"font-size:12px;color:red\" class=\"qodel\" id=\"qodel" + oName + "\">删除</a></div></div>"
+                            $('#qo').append(newOp)
+                            $('.qodel').click(function () {
+                                $(this)[0].parentNode.parentNode.remove()
+                                qonum = $('#qo').children().length
+                                if (qonum > 0) {
+                                    for (i = 0; i < qonum; i++) {
+                                        $('#qo')[0].children[i].children[0].innerText = String.fromCharCode(i + 65)
+                                    }
+                                }
+                            })
+                        } else {
+                            layer.msg('最多只能添加10个选项')
+                        }
+                    })
+                }
+            });
+
+            form.on('submit(addq)', function (data) {
+                console.log(data)
+                if (data.field.qtype == '填空') {
+                    if (data.field.content == '') {
+                        layer.msg('请填写问题描述')
+                        return false
+                    } else {
+                        ques.push({ id: ques.length + 1, question: $('#qtitle')[0].value, type: 0, des: data.field.content })
+                    }
+                } else if (data.field.qtype == '单选') {
+                    var fqonum = $('#qo').children().length
+                    if (fqonum < 2) {
+                        layer.msg('单选题至少要有两个选项')
+                        return false
+                    }
+                    for (i = 0; i < fqonum; i++) {
+                        if ($('#qo')[0].children[i].children[1].children[0].value == '') {
+                            layer.msg('请将选项填写完整')
+                            return false
+                        }
+                    }
+                    var fqo = []
+                    for (i = 0; i < fqonum; i++) {
+                        fqo.push($('#qo')[0].children[i].children[1].children[0].value)
+                    }
+                    ques.push({ id: ques.length + 1, question: $('#qtitle')[0].value, type: 1, des: fqo })
+                }
+                $('#resetq').click()
+                table.reload('qs', { data: ques })
+                layer.msg('已添加')
+                return false
+            })
+
+            form.on('submit(sendqn)', function (data) {
+                if (ques.length == 0) {
+                    layer.msg('请添加问题')
+                    return false
+                }
+                for (i = 0; i < ques.length; i++)
+                    delete ques[i].LAY_TABLE_INDEX
+                var top = data.field.top != null
+                $.ajax({
+                    type: 'POST',
+                    url: 'https://devmeteor.cn:8080/suAddQuestionnaire',
+                    headers: {
+                        'top': top
+                    },
+                    data: JSON.stringify({
+                        title: data.field.title,
+                        des: data.field.content,
+                        questions: JSON.stringify(ques)
+                    }),
+                    contentType: 'application/json',
+                    success: function (e) {
+                        if (e.code == 20001) {
+                            if (e.data != null) {
+                                window.localStorage.setItem('Device-ID', e.data)
+                            }
+                            window.location.href = '../../refuse.html';
+                        }
+                        layer.msg('已发布')
+                    },
+                    error: function (e) {
+                        if (e.code == 20001) {
+                            if (e.data != null) {
+                                window.localStorage.setItem('Device-ID', e.data)
+                            }
+                            window.location.href = '../../refuse.html';
+                        }
+                        layer.msg('发布失败，请重试')
+                    }
+                })
+                return false
+            })
+        })
+    </script>
+</body>
+
+</html>

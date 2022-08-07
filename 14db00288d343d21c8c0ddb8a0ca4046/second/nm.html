@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="../../css/layui.css">
+    <link rel="stylesheet" href="../../css/simditor.css">
+	<style>
+		.layui-table-tips-main{
+			max-height:unset !important;
+		}
+
+        .layui-table-cell{
+            height: 380px;
+            line-height: 380px;
+        }
+
+        thead .layui-table-cell{
+            height: 28px;
+            line-height: 28px;
+        }
+
+        td:nth-child(4) > .layui-table-cell{
+            line-height: unset;
+        }
+
+        .simditor-body{
+            max-width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px !important;
+        }
+
+        .simditor-body::-webkit-scrollbar{
+            width: 6px;
+            height: 6px;
+        }
+
+        .simditor-body::-webkit-scrollbar-thumb{
+            border-radius: 6px;
+            -webkit-box-shadow:inset 0 0 6px rgba(0,0,0,0.2);
+            background-color: rgba(0,0,0,0.2);
+        }
+
+        .simditor-body::-webkit-scrollbar-track{
+            -webkit-box-shadow:inset 0 0 6px rgba(0,0,0,0.2);
+            border-radius: 0;
+            background: rgba(0,0,0,0.1);
+        }
+
+        .simditor-body img{
+            max-width: 100%;
+        }
+
+        .simditor-placeholder{
+            padding: 10px !important;
+        }
+	</style>
+</head>
+
+<body>
+    <div class="layui-container">
+        <table id="ns" lay-filter="ns" lay-data="{id: 'ns'}"></table>
+        <script type="text/html" id="setTop">
+            <input type="checkbox" name="top" value="{{d.top_level!=0}}" lay-skin="switch" lay-text="是|否"
+                lay-filter="top" {{ d.top_level!=0 ? 'checked' : '' }}>
+        </script>
+        <script type="text/html" id="operation">
+            <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="detail">详情</a>
+            <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="delete">删除</a>
+        </script>
+    </div>
+    <script src="../../layui.js"></script>
+    <script src="../../js/simditor/jquery.min.js"></script>
+    <script src="../../js/simditor/module.js"></script>
+    <script src="../../js/simditor/hotkeys.js"></script>
+    <script src="../../js/simditor/uploader.js"></script>
+    <script src="../../js/simditor/simditor.js"></script>
+    <script>
+        layui.use(['element', 'table', 'form'], function () {
+            var table = layui.table
+            var element = layui.element
+            var form = layui.form
+            var $ = layui.jquery
+            let deviceId = window.localStorage.getItem("Device-ID")
+            if (deviceId != null) {
+                $.ajaxSetup({
+                    headers: {
+                        "Device-ID": deviceId
+                    }
+                })
+            }
+            table.render({
+                elem: '#ns',
+                title: '通知管理',
+                height: 'full-50',
+                toolbar: true,
+                page: true,
+                limits: [10, 20, 30],
+                url: 'https://devmeteor.cn:8080/suGetNoticeList',
+                cols: [[
+                    { field: 'obj_id', title: 'obj_id', hide: true },
+                    {
+                        field: 'cate', title: '分类', width: 60, templet: function (d) {
+                            switch (d.cate) {
+                                case 0: return '系统'
+                                case 1: return '课程'
+                                case 2: return '考试'
+                                case 3: return '放假'
+                                case 4: return '其他'
+                            }
+                        }
+                    },
+                    { field: 'title', title: '标题',width:300, edit: 'text' },
+                    {
+                        field: 'detail', title: '正文', width: 500,height:400, templet: function (d) {
+                            if(d.content===''){
+                                let detail=JSON.parse(decodeURIComponent(d.detail).replace(' ','&nbsp;'))
+                                for(i in detail){
+                                    var item=detail[i]
+                                    switch(item.type){
+                                        case 1:
+                                            d.content+=`<p>${item.content}</p>`
+                                            break;
+                                        case 2:;
+                                            d.content+=`<p><img src="${item.content}"></p>`
+                                            break;
+                                    }
+                                }
+                            }
+                            return `<textarea id="content${d.obj_id}" required lay-verify="required"></textarea>
+                            <button id="submit${d.obj_id}" class="layui-btn layui-btn-xs layui-btn-normal" style="margin-left:auto;display:block;margin-top:10px">保存</button>
+                            <script>
+                                var simditor${d.obj_id}=new Simditor({
+                                    textarea:$('#content${d.obj_id}'),
+                                    toolbar:["image"],
+                                    placeholder:'请输入内容',
+                                    defaultImage:'https://devmeteor.cn/whsAdmin/images/banner_placeholder.png',
+                                    upload:{
+                                        url:'https://devmeteor.cn:8080/v2/su/cache/upload',
+                                    }
+                                })
+                                simditor${d.obj_id}.setValue(\`${d.content}\`)
+                                $("#submit${d.obj_id}").click(function(){
+                                    let content=simditor${d.obj_id}.getValue()
+                                    if(content===''){
+                                        layer.msg('不能为空')
+                                        return;
+                                    }
+                                    $.ajax({
+                                        type: 'PUT',
+                                        url: 'https://devmeteor.cn:8080/v2/su/notice/content/edit?obj_id=${d.obj_id}&value=' + encodeURIComponent(content),
+                                        success: function (e) {
+                                            if (e != null && e.code == 40004) {
+                                                layui.data('user', {
+                                                    key: 'username',
+                                                    remove: true
+                                                })
+                                                layui.data('user', {
+                                                    key: 'token',
+                                                    remove: true
+                                                })
+                                                layui.data('user', {
+                                                    key: 'name',
+                                                    remove: true
+                                                })
+                                                layui.data('user', {
+                                                    key: 'institute',
+                                                    remove: true
+                                                })
+                                                layui.data('user', {
+                                                    key: 'id',
+                                                    remove: true
+                                                })
+                                                top.location.href = "../"
+                                            } else {
+                                                layer.msg('修改成功')
+                                                layui.table.reload('ns', { url: 'https://devmeteor.cn:8080/suGetNoticeList' })
+                                            }
+                                        },
+                                        error: function () {
+                                            layer.msg('修改失败')
+                                        }
+                                    })
+                                })
+                            <\/script>`
+                        }
+                    },
+                    { field: 'sender', title: '发送者', width: 80 },
+                    {
+                        field: 'receiver', title: '接收对象', width: 90, templet: function (d) {
+                            var receiver = JSON.parse(d.receiver)
+                            var receiverText = ""
+                            if (receiver.institute.length != 0)
+                                receiverText += "学院：" + receiver.institute + "<br>"
+                            if (receiver.classes.length != 0)
+                                receiverText += "班级：" + receiver.classes + "<br>"
+                            if (receiver.students.length != 0)
+                                receiverText += "学号：" + receiver.students + "<br>"
+                            switch (d.type) {
+                                case 0: return receiverText
+                                case 1: return '全员'
+                            }
+                        }
+                    },
+                    {
+                        field: 'type', title: '通知类型', width: 90, templet: function (d) {
+                            switch (d.type) {
+                                case 0: return '定向'
+                                case 1: return '全员'
+                            }
+                        }
+                    },
+                    {
+                        field: 'timestamp', title: '发送时间', width: 180, sort: true, templet: function (d) {
+                            var date = new Date(d.timestamp)
+                            var year = date.getFullYear()
+                            var month = date.getMonth() + 1
+                            var day = date.getDate()
+                            var h = date.getHours()
+                            var m = date.getMinutes()
+                            return year + "年" + month + "月" + day + "日 " + (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m)
+                        }
+                    },
+                    { field: 'top_level', title: '是否置顶', templet: '#setTop', width: 120, unresize: true },
+                    { toolbar: '#operation', title: '操作', width: 120 }
+                ]],
+                parseData: function (res) {
+                    if (res.code == 40004) {
+                        layui.data('user', {
+                            key: 'username',
+                            remove: true
+                        })
+                        layui.data('user', {
+                            key: 'token',
+                            remove: true
+                        })
+                        layui.data('user', {
+                            key: 'name',
+                            remove: true
+                        })
+                        layui.data('user', {
+                            key: 'institute',
+                            remove: true
+                        })
+                        layui.data('user', {
+                            key: 'id',
+                            remove: true
+                        })
+                        top.location.href = "../"
+                    }
+                    if (res.code == 10004) {
+                        var list = res.data.list
+                        for (var i in list) {
+                            list[i].detail = encodeURIComponent(list[i].detail)
+                        }
+                        return { code: 0, data: list, count: res.data.total }
+                    }
+                    return { code: 500 }
+                }
+            })
+
+            var parseJsonArray = function (s) {
+                try {
+                    var json = JSON.parse(s)
+                    var res = ''
+                    for (var i = 0; i < json.length; i++) {
+                        res += json[i].content
+                        if (i != json.length - 1)
+                            res += '\n'
+                    }
+                    return res
+                } catch (e) {
+                    return s
+                }
+            }
+
+            table.on('tool(ns)', function (e) {
+                var data = e.data
+                if (e.event == 'detail') {
+                    var cate = ''
+                    switch (data.cate) {
+                        case 1:
+                            cate = '课程'
+                            break
+                        case 2:
+                            cate = '考试'
+                            break
+                        case 3:
+                            cate = '放假'
+                            break
+                        case 4:
+                            cate = '其他'
+                            break
+                    }
+                    layer.open({
+                        title: "详情",
+                        content: "分类：" + cate + "<br>标题：" + data.title + "<br>正文：" + data.detail
+                    })
+                } else if (e.event == 'delete') {
+                    layer.confirm('确认删除？', function (index) {
+                        $.ajax({
+                            type: 'DELETE',
+                            url: 'https://devmeteor.cn:8080/suDeleteNotice/' + data.obj_id,
+                            success: function (e) {
+                                if (e.code == 40004) {
+                                    layui.data('user', {
+                                        key: 'username',
+                                        remove: true
+                                    })
+                                    layui.data('user', {
+                                        key: 'token',
+                                        remove: true
+                                    })
+                                    layui.data('user', {
+                                        key: 'name',
+                                        remove: true
+                                    })
+                                    layui.data('user', {
+                                        key: 'institute',
+                                        remove: true
+                                    })
+                                    layui.data('user', {
+                                        key: 'id',
+                                        remove: true
+                                    })
+                                    top.location.href = "../"
+                                } else {
+                                    layer.msg('已删除')
+                                    layer.close(index)
+                                    table.reload('ns', { url: 'https://devmeteor.cn:8080/suGetNoticeList' })
+                                }
+                            },
+                            error() {
+                                layer.msg('删除失败，请重试')
+                            }
+                        })
+                    })
+                }
+            })
+            table.on('edit(ns)', function (obj) {
+                var value = obj.value
+                    , data = obj.data
+                    , field = obj.field
+                $.ajax({
+                    type: 'PUT',
+                    url: 'https://devmeteor.cn:8080/suUpdateNotice?obj_id=' + data.obj_id + '&field=' + field + '&value=' + value,
+                    success: function (e) {
+                        if (e != null && e.code == 40004) {
+                            layui.data('user', {
+                                key: 'username',
+                                remove: true
+                            })
+                            layui.data('user', {
+                                key: 'token',
+                                remove: true
+                            })
+                            layui.data('user', {
+                                key: 'name',
+                                remove: true
+                            })
+                            layui.data('user', {
+                                key: 'institute',
+                                remove: true
+                            })
+                            layui.data('user', {
+                                key: 'id',
+                                remove: true
+                            })
+                            top.location.href = "../"
+                        } else {
+                            layer.msg('修改成功')
+                        }
+                    },
+                    error: function () {
+                        layer.msg('修改失败')
+                    }
+                })
+            })
+
+            // form.on('submit(saveDetail)', function (data) {
+            //     var content = data.field.detail.split('\n')
+            //     var des = []
+            //     for (var i in content)
+            //         des.push({ type: 1, content: content[i] })
+            //     var detail = encodeURIComponent(JSON.stringify(des))
+            //     $.ajax({
+            //         type: 'PUT',
+            //         url: 'https://devmeteor.cn:8080/suUpdateNotice?obj_id=' + data.field.objId + '&field=detail&value=' + detail,
+            //         success: function (e) {
+            //             if (e != null && e.code == 40004) {
+            //                 layui.data('user', {
+            //                     key: 'username',
+            //                     remove: true
+            //                 })
+            //                 layui.data('user', {
+            //                     key: 'token',
+            //                     remove: true
+            //                 })
+            //                 layui.data('user', {
+            //                     key: 'name',
+            //                     remove: true
+            //                 })
+            //                 layui.data('user', {
+            //                     key: 'institute',
+            //                     remove: true
+            //                 })
+            //                 layui.data('user', {
+            //                     key: 'id',
+            //                     remove: true
+            //                 })
+            //                 top.location.href = "../"
+            //             } else {
+            //                 layer.msg('修改成功')
+            //                 table.reload('ns', { url: 'https://devmeteor.cn:8080/suGetNoticeList' })
+            //             }
+            //         },
+            //         error: function () {
+            //             layer.msg('修改失败')
+            //         }
+            //     })
+            //     return false
+            // })
+
+            form.on('switch(top)', function (obj) {
+                var isTop = obj.elem.checked
+                var objId = obj.othis[0].parentNode.parentNode.parentNode.firstChild.firstChild.innerText
+                $.ajax({
+                    type: 'PUT',
+                    url: 'https://devmeteor.cn:8080/suSetNoticeTop?obj_id=' + objId + '&top=' + isTop,
+                    success: function (e) {
+                        if (e != null && e.code == 40004) {
+                            layui.data('user', {
+                                key: 'username',
+                                remove: true
+                            })
+                            layui.data('user', {
+                                key: 'token',
+                                remove: true
+                            })
+                            layui.data('user', {
+                                key: 'name',
+                                remove: true
+                            })
+                            layui.data('user', {
+                                key: 'institute',
+                                remove: true
+                            })
+                            layui.data('user', {
+                                key: 'id',
+                                remove: true
+                            })
+                            top.location.href = "../"
+                        } else {
+                            layer.msg("操作成功")
+                            if (e.code == 60001)
+                                table.reload('ns', { url: 'https://devmeteor.cn:8080/suGetNoticeList' })
+                        }
+                    },
+                    error: function () {
+                        layer.msg('操作失败')
+                        table.reload('ns', { url: 'https://devmeteor.cn:8080/suGetNoticeList' })
+                    }
+                })
+            })
+        })
+    </script>
+</body>
+
+</html>

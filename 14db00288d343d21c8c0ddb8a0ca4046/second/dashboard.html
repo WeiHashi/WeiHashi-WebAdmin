@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="../../css/layui.css">
+    <style>
+        .num {
+            color: #009688;
+            font-size: 25px;
+            cursor: auto;
+        }
+
+        .num:hover{
+            color: #009688;
+        }
+
+        a {
+            cursor: pointer;
+        }
+
+        .chart{
+            height: 300px;
+            max-width: 100%;
+            overflow: hidden;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-container">
+        <div class="layui-row layui-col-space20">
+            <div class="layui-col-md2 layui-col-xs12">
+                <div class="layui-card">
+                    <div class="layui-card-header">总用户数</div>
+                    <div class="layui-card-body" style="text-align: center;">
+                        <a class="num" id="userCount">0</a>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-col-md2 layui-col-xs12">
+                <div class="layui-card">
+                    <div class="layui-card-header">教务平台绑定数</div>
+                    <div class="layui-card-body" style="text-align: center;">
+                        <a class="num" id="bindedCount">0</a>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-col-md2 layui-col-xs12 ">
+                <div class="layui-card">
+                    <div class="layui-card-header">教务平台绑定率</div>
+                    <div class="layui-card-body" style="text-align: center;">
+                        <a class="num" id="bindPercent">0%</a>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-col-md3 layui-col-xs12 ">
+                <div class="layui-card">
+                    <div class="layui-card-header">今日使用人数</div>
+                    <div class="layui-card-body" style="text-align: center;">
+                        <a class="num" id="todayCount">0</a>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-col-md3 layui-col-xs12 ">
+                <div class="layui-card">
+                    <div class="layui-card-header">今日启动次数</div>
+                    <div class="layui-card-body" style="text-align: center;">
+                        <a class="num" id="dailyCount">0</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="layui-row layui-col-space20">
+            <div class="layui-col-md4 layui-col-xs12">
+                <div class="layui-card">
+                    <div class="layui-card-header">已发布通知数</div>
+                    <div class="layui-card-body" style="text-align: center;">
+                        <a class="num" id="noticeCount">0</a>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-col-md4 layui-col-xs12">
+                <div class="layui-card">
+                    <div class="layui-card-header">已发布问卷数</div>
+                    <div class="layui-card-body" style="text-align: center;">
+                        <a class="num" id="questionnaireCount">0</a>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-col-md4 layui-col-xs12 ">
+                <div class="layui-card">
+                    <div class="layui-card-header">班级总数</div>
+                    <div class="layui-card-body" style="text-align: center;">
+                        <a class="num" id="classCount">0</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="layui-row layui-col-space20">
+            <div class="layui-col-md6 layui-col-xs12">
+                <div class="layui-card">
+                    <div class="layui-card-header">近一周日活用户数</div>
+                    <div class="layui-card-body" style="text-align: center;">
+                        <div id="uv-rec-week" class="chart"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-col-md6 layui-col-xs12">
+                <div class="layui-card">
+                    <div class="layui-card-header">近一周日启动次数</div>
+                    <div class="layui-card-body" style="text-align: center;">
+                        <div id="du-rec-week"  class="chart" style="height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="../../layui.js"></script>
+    <script src="../../js/echarts.min.js"></script>
+    <script>
+        var uvRecWeek=document.getElementById("uv-rec-week")
+        var uvChart=echarts.init(uvRecWeek)
+        var duRecWeek=document.getElementById("du-rec-week")
+        var duChart=echarts.init(duRecWeek)
+        layui.use(['element'], function () {
+            var $ = layui.jquery
+            let deviceId = window.localStorage.getItem("Device-ID")
+            if (deviceId != null) {
+                $.ajaxSetup({
+                    headers: {
+                        "Device-ID": deviceId
+                    }
+                })
+            }
+            $.ajax({
+                type:'GET',
+                url:'https://devmeteor.cn:8080/v2/su/overview',
+                dataType:'json',
+                success:function(e){
+                    if (e.code == 20001) {
+                        if (e.data != null) {
+                            window.localStorage.setItem('Device-ID', e.data)
+                        }
+                        window.location.href = '../../refuse.html';
+                    }
+                    if(e.code==10004){
+                        var data=e.data
+                        for(key in data)
+                            $("#"+key).html(data[key])
+                        $("#bindPercent").html((parseFloat(data['bindedCount'])/parseFloat(data['userCount'])*100).toFixed(2)+'%')
+                        var uvDates=[];
+                        var uvValues=[];
+                        for(i in data.uv_rec_week){
+                            var item=data.uv_rec_week[i]
+                            uvDates.unshift(item.date)
+                            uvValues.unshift(item.value)
+                        }
+                        uvChart.setOption({
+                            xAxis:{
+                                type:'category',
+                                data:uvDates
+                            },
+                            yAxis:{
+                                type:'value'
+                            },
+                            series:[
+                                {
+                                    data:uvValues,
+                                    type:'line',
+                                    smooth:true
+                                }
+                            ],
+                            color:'#c1272d',
+                            tooltip:{
+                                axisPointer:{
+                                    type:'line'
+                                }
+                            }
+                        })
+                        var duDates=[];
+                        var duValues=[];
+                        for(i in data.du_rec_week){
+                            var item=data.du_rec_week[i]
+                            duDates.unshift(item.date)
+                            duValues.unshift(item.value)
+                        }
+                        duChart.setOption({
+                            xAxis:{
+                                type:'category',
+                                data:duDates
+                            },
+                            yAxis:{
+                                type:'value'
+                            },
+                            series:[
+                                {
+                                    data:duValues,
+                                    type:'line',
+                                    smooth:true
+                                }
+                            ],
+                            color:'#c1272d',
+                            tooltip:{
+                                axisPointer:{
+                                    type:'line'
+                                }
+                            }
+                        })
+                    }
+                }
+            })
+        })
+    </script>
+</body>
+
+</html>

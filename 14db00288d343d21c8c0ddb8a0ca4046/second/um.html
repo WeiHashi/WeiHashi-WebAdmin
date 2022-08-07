@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="../../css/layui.css">
+</head>
+
+<body>
+    <div class="layui-container">
+        <table id="us" lay-filter="us" lay-data="{id: 'us'}"></table>
+    </div>
+    <script src="../../layui.js"></script>
+    <script>
+        layui.use(['element', 'table'], function () {
+            var element = layui.element
+            var table = layui.table
+            var $ = layui.jquery
+            let deviceId = window.localStorage.getItem("Device-ID")
+            if (deviceId != null) {
+                $.ajaxSetup({
+                    headers: {
+                        "Device-ID": deviceId
+                    }
+                })
+            }
+            table.render({
+                elem: '#us',
+                title: '用户管理',
+                height: 'full-50',
+                toolbar: true,
+                page: true,
+                url: 'https://devmeteor.cn:8080/suGetUserList',
+                cols: [[
+                    { field: 'openid', title: 'openid', hide: true },
+                    { field: 'nickname', title: 'QQ昵称' },
+                    {
+                        field: 'name', title: '姓名', sort: true, templet: function (d) {
+                            if (d.name == '')
+                                return '未绑定'
+                            return d.name
+                        }
+                    },
+                    {
+                        field: 'studentid', title: '学号', sort: true, templet: function (d) {
+                            if (d.studentid == '')
+                                return '未绑定'
+                            return d.studentid
+                        }
+                    },
+                    {
+                        field: 'email', title: '邮箱', hide: true, templet: function (d) {
+                            if (d.email == '')
+                                return '未绑定'
+                            return d.email
+                        }
+                    },
+                    {
+                        field: 'latest_use', title: '上次登录时间', sort: true, templet: function (d) {
+                            var date = new Date(d.latest_use)
+                            var year = date.getFullYear()
+                            var month = date.getMonth() + 1
+                            var day = date.getDate()
+                            var h = date.getHours()
+                            var m = date.getMinutes()
+                            return year + "年" + month + "月" + day + "日 " + (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m)
+                        }
+                    },
+                    {
+                        field: 'platform', title: '平台', templet: function (d) {
+                            switch (d.platform) {
+                                case 1: return 'QQ小程序'
+                                case 2: return 'Android'
+                            }
+                        }
+                    }
+                ]],
+                parseData: function (res) {
+                    console.log(res)
+                    if (res.code == 20001) {
+                        if (res.data != null) {
+                            window.localStorage.setItem('Device-ID', res.data)
+                        }
+                        window.location.href = '../../refuse.html';
+                    }
+                    if (res.code == 10004)
+                        return { code: 0, count: res.data.total, data: res.data.list }
+                    else
+                        return { code: 500, msg: "获取异常" }
+                }
+            })
+        })
+    </script>
+</body>
+
+</html>

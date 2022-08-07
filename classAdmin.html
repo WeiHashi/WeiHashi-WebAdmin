@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="Shortcut Icon" href="images/logo.png">
+    <title>微哈师后台管理系统</title>
+    <link rel="stylesheet" href="css/layui.css">
+    <link rel="stylesheet" href="css/global.css">
+    <style>
+        * {
+            -moz-user-select: -moz-none;
+            -moz-user-select: none;
+            -o-user-select: none;
+            -khtml-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .layui-header .layui-this{
+            background-color: transparent !important;
+        }
+
+        .layui-header .layui-this a{
+            background-color: transparent !important;
+            color: #333 !important;
+        }
+
+        .first-tab i.layui-tab-close {
+            display: none !important;
+        }
+
+        .layui-nav-child dd a,
+        #logout {
+            cursor: pointer;
+        }
+
+        .layui-tab-content,
+        .layui-tab-item {
+            height: 100%;
+        }
+
+        .layui-tab-item {
+            background-color: #f2f2f2;
+            padding-top: 10px;
+        }
+
+        .layui-nav-more {
+            display: none;
+        }
+
+        @media screen and (max-width:750px) {
+            .layui-footer {
+                left: 0 !important;
+            }
+        }
+
+        @media screen and (max-width: 420px) {
+            .layui-footer {
+                font-size: 10px;
+                height: 30px !important;
+                line-height: 30px !important;
+            }
+
+            .layui-header>.layui-nav>li>a {
+                padding-left: 3px;
+                padding-right: 3px;
+            }
+        }
+
+        @media screen and (max-width: 350px) {
+            .layui-logo {
+                width: 150px !important;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-layout layui-layout-admin">
+        <div class="layui-header">
+            <div class="layui-logo" style="color:white;font-weight: 600;font-size: 17px;">
+                <img src="images/logo.png" class="layui-nav-img">微哈师后台管理系统</div>
+            <ul class="layui-nav layui-layout-right">
+                <li class="layui-nav-item">
+                    <a id="className">管理员</a>
+                    <dl class="layui-nav-child">
+                        <dd><a id="BI">基本资料</a></dd>
+                        <dd><a id="CP">修改密码</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item"><a id="logout">退出登录</a></li>
+            </ul>
+        </div>
+
+        <div class="layui-side layui-bg-black">
+            <div class="layui-side-scroll">
+                <ul class="layui-nav layui-nav-tree" lay-filter="test">
+                    <li class="layui-nav-item layui-this"><a id="dashboard">概览</a></li>
+                    <li class="layui-nav-item layui-nav-itemed">
+                        <a style="pointer-events: none;">班级</a>
+                        <dl class="layui-nav-child">
+                            <dd><a id="sendNotice">发布通知</a></dd>
+                            <dd><a id="SQn">发布问卷</a></dd>
+                            <dd><a id="NM">通知管理</a></dd>
+                            <dd><a id="QnM">问卷管理</a></dd>
+                            <dd><a id="QnR">问卷回收</a></dd>
+                            <dd><a id="MM">成员管理</a></dd>
+                        </dl>
+                    </li>
+                    <li class="layui-nav-item layui-nav-itemed">
+                        <a style="pointer-events: none;">相关链接</a>
+                        <dl class="layui-nav-child">
+                            <dd><a href="https://devmeteor.cn" target="_blank">Meteor</a></dd>
+                            <dd><a href="http://jwpt.hrbnu.edu.cn/jsxsd/" target="_blank">哈尔滨师范大学教务平台</a>
+                            </dd>
+                            <dd><a href="http://www.hrbnu.edu.cn" target="_blank">哈尔滨师范大学</a></dd>
+                        </dl>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="layui-body">
+            <div class="layui-tab" lay-allowClose="true" lay-filter="tab" style="height: 88%;">
+                <ul class="layui-tab-title">
+                    <li class="layui-this first-tab" lay-id="dashboard">概览</li>
+                </ul>
+                <div class="layui-tab-content">
+                    <div class="layui-tab-item layui-show">
+                        <iframe id="dboard" width="100%" height="100%" frameborder="0" scrolling="no"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="layui-footer">
+            Copyright © 2020 - <span id="cy"></span> Meteor. All right reserved. Powered by layui.
+        </div>
+        <div class="site-tree-mobile layui-hide">
+            <i class="layui-icon"></i>
+        </div>
+        <div class="site-mobile-shade"></div>
+    </div>
+    <script src="layui.js"></script>
+    <script src="js/classAdmin.js"></script>
+</body>
+
+</html>
